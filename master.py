@@ -545,6 +545,12 @@ bullets = []
 bullet_speed = 1000
 bullet_size = 2
 
+# firing mode: toggled with 'b' between single-shot and automatic spray
+spray_mode = False
+mouse_fire_held = False
+spray_fire_rate = 8      # bullets per second while spraying
+spray_fire_timer = 0.0
+
 # enemies
 enemies = []
 MAX_ENEMIES = 5
@@ -3196,6 +3202,17 @@ def animate():
         update_cheat_drive()
 
     update_bullets(delta_time)
+
+    # automatic spray fire: while spray_mode is toggled on and the left
+    # mouse button is held down, keep shooting at a fixed rate
+    global spray_fire_timer
+    if spray_mode and mouse_fire_held and not game_over and not game_paused:
+        spray_fire_timer += delta_time
+        fire_interval = 1.0 / spray_fire_rate
+        while spray_fire_timer >= fire_interval:
+            spray_fire_timer -= fire_interval
+            shoot()
+
     glutPostRedisplay()
     
 def _make_street_character():
@@ -3640,6 +3657,13 @@ def keyboardListener(key, x, y):
                 gun_follow = True
         return
 
+    # b toggles between single-shot and automatic spray firing
+    if nk == b'b':
+        global spray_mode, spray_fire_timer
+        spray_mode = not spray_mode
+        spray_fire_timer = 0.0
+        return
+
     # car entry / exit
     if nk == b'e':
         dist = math.hypot(player_pos[0] - car_x, player_pos[1] - car_y)
@@ -3745,6 +3769,7 @@ def specialKeyListener(key, x, y):
 
 def mouseListener(button, state, x, y):
     global first_person
+    global mouse_fire_held, spray_fire_timer
 
     if game_menu_open:
         if button == GLUT_LEFT_BUTTON and state == GLUT_DOWN:
@@ -3770,6 +3795,15 @@ def mouseListener(button, state, x, y):
     if button == GLUT_RIGHT_BUTTON and state == GLUT_DOWN:
         if not game_paused:
             first_person = not first_person
+
+    # track left-button hold state so automatic spray fire can keep
+    # shooting every frame in animate() while the button stays down
+    if button == GLUT_LEFT_BUTTON:
+        if state == GLUT_DOWN:
+            mouse_fire_held = True
+            spray_fire_timer = 0.0
+        elif state == GLUT_UP:
+            mouse_fire_held = False
             
 
 
